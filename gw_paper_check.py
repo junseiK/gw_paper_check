@@ -35,7 +35,7 @@ def fetch_and_summarize_gw_papers():
     yesterday = now - timedelta(days=1)
     base_date = yesterday.replace(hour=0, minute=0, second=0, microsecond=0).astimezone(timezone.utc)
     
-    client = arxiv.Client(page_size=100, delay_seconds=3, num_retries=3)
+    client = arxiv.Client(page_size=60, delay_seconds=10, num_retries=5)
     categories = '(cat:gr-qc OR cat:astro-ph.HE OR cat:astro-ph.IM OR cat:astro-ph.CO)'
 
     def fetch_papers(query):
@@ -47,6 +47,7 @@ def fetch_and_summarize_gw_papers():
         return list(client.results(search))
 
     results_singular = fetch_papers(f'all:"gravitational wave" AND {categories}')
+    time.sleep(15)
     results_plural = fetch_papers(f'all:"gravitational waves" AND {categories}')
 
     unique_papers = {p.entry_id: p for p in (results_singular + results_plural) if p.published >= base_date}
