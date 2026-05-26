@@ -12,6 +12,7 @@ def send_discord_notify(message):
         print("【エラー】DISCORD_WEBHOOK_URL が設定されていません。")
         return
 
+    # Discordの文字数制限(2000文字)対策は残しておきます
     chunks = [message[i:i+1900] for i in range(0, len(message), 1900)]
     for chunk in chunks:
         data = {"content": chunk}
@@ -27,7 +28,7 @@ def clean_text(text):
 
 def fetch_and_summarize_gw_papers():
     print("=" * 50)
-    print("重力波論文デイリーチェック（超軽量・最速版）を開始します...")
+    print("重力波論文デイリーチェック（一括解析・研究特化版）を開始します...")
     print("=" * 50)
 
     jst = timezone(timedelta(hours=9))
@@ -38,8 +39,6 @@ def fetch_and_summarize_gw_papers():
     # 2. arXivから取得
     client = arxiv.Client(page_size=30, delay_seconds=5, num_retries=3)
     
-    # ★変更点：限界まで削ぎ落とした超シンプルなクエリ
-    # "gravitational wave" (単数形) のみで検索し、カテゴリー絞り込みも外す
     search_query = 'all:"gravitational wave"'
     
     search = arxiv.Search(
@@ -79,37 +78,45 @@ def fetch_and_summarize_gw_papers():
     genai.configure(api_key=GOOGLE_API_KEY)
     model = genai.GenerativeModel('gemini-3.5-flash')
 
-    print(f"全 {len(filtered_papers)} 件を 5 件ずつチャンク処理します...")
+    print(f"全 {len(filtered_papers)} 件を一括でAIに解析させます...")
     final_output = f"**【本日の新着論文: {len(filtered_papers)}件】**\n\n"
     
-    chunk_size = 5
-    for i in range(0, len(filtered_papers), chunk_size):
-        chunk = filtered_papers[i : i + chunk_size]
-        chunk_text = ""
-        for idx, paper in enumerate(chunk, i + 1):
-            safe_title = clean_text(paper.title)
-            safe_summary = clean_text(paper.summary)
-            chunk_text += f"\n--- 論文番号: {idx} ---\n【タイトル】{safe_title}\n[アブスト]\n{safe_summary}\n"
+    # 5件ずつのループを廃止し、すべての論文を1つのテキストにまとめる
+    all_papers_text = ""
+    for idx, paper in enumerate(filtered_papers, 1):
+        safe_title = clean_text(paper.title)
+        safe_summary = clean_text(paper.summary)
+        # ★ここに paper.entry_id (URL) を追加し、AIがリンクを出力できるようにしました
+        all_papers_text += f"\n--- 論文番号: {idx} ---\n【タイトル】{safe_title}\n【URL】{paper.entry_id}\n[アブスト]\n{safe_summary}\n"
 
-        prompt = f"""
-        あなたは重力波データ解析の専門家です。以下の論文リストを読み、各論文について3点を出力してください。
-        数式等で難しければ「要約不可」でスキップ可能です。
-        1. 【和訳要約】3行程度
-        2. 【関連度スコア】データ解析との関連度（1〜10点）と理由
-        3. 【判定】7点以上なら「★ピックアップ」、それ以外は「スルー」
-        [リスト]
-        {chunk_text}
-        """
+    prompt = f"""
+    あなたは重力波データ解析の専門家です。
+    以下のようなテーマに興味を持っています。特に1番上は研究のテーマであり、特別な興味を持っています。
+    ・確率的重力波背景放射の非ガウス的な解析を機械学習を用いて行う
+    ・上記に関する、他の確率論的重力波背景放射のこと、機械学習のこと
+    ・ブラックホールの質量分布、階層進化の話
+    ・ハッブルテンションを重力波から解く
+    
+    以下の論文リストを読み、各論文について5点を出力してください。
+    1. 論文名
+    2. arxivリンク
+    3. 和訳要約(3行程度)
+    4. あなたの興味との関連度（1〜10点）と理由
+    5. 判定(7点以上なら「★ピックアップ」、それ以外は「スルー」)
+    
+    出力に関して、冒頭に「わかりました！」等書くことは不要です。レイアウトに沿って、わかりやすく、解析をお願いします。
+    
+    [リスト]
+    {all_papers_text}
+    """
 
-        print(f"--- グループ {i//chunk_size + 1} を解析中... ---")
-        try:
-            response = model.generate_content(prompt)
-            final_output += response.text + "\n"
-        except Exception as e:
-            final_output += f"\n【エラー】論文番号 {i+1}〜 の解析に失敗しました: {e}\n"
-
-        if i + chunk_size < len(filtered_papers):
-            time.sleep(15)
+    print("--- AIによる一括解析を実行中... ---")
+    try:
+        # 一発勝負で全件を投げる
+        response = model.generate_content(prompt)
+        final_output += response.text + "\n"
+    except Exception as e:
+        final_output += f"\n【エラー】AIの解析に失敗しました: {e}\n"
 
     print("解析完了。Discordに通知を送信します。")
     send_discord_notify(final_output)
