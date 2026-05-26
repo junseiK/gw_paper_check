@@ -74,7 +74,8 @@ def fetch_and_summarize_gw_papers():
     filtered_papers = sorted(unique_papers.values(), key=lambda x: x.published, reverse=True)
 
     if not filtered_papers:
-        send_discord_notify("本日は新着の重力波論文はありませんでした。")
+        date_str = now.strftime("%Y年%m月%d日")
+        send_discord_notify(f"【{date_str}】本日は新着の重力波論文はありませんでした。")
         return
 
     # 3. Gemini設定（★ここを新SDKの書き方に完全修正しました）
@@ -83,6 +84,8 @@ def fetch_and_summarize_gw_papers():
 
     print(f"全 {len(filtered_papers)} 件を一括でAIに解析させます...")
     final_output = f"**【本日の新着論文: {len(filtered_papers)}件】**\n\n"
+    date_str = now.strftime("%Y年%m月%d日")
+    final_output = f"**【本日({date_str})の新着論文: {len(filtered_papers)}件】**\n\n"
     
     # 5件ずつのループを廃止し、すべての論文を1つのテキストにまとめる
     all_papers_text = ""
@@ -93,22 +96,21 @@ def fetch_and_summarize_gw_papers():
         all_papers_text += f"\n--- 論文番号: {idx} ---\n【タイトル】{safe_title}\n【URL】{paper.entry_id}\n[アブスト]\n{safe_summary}\n"
 
     prompt = f"""
-    あなたは重力波データ解析の専門家です。
+    私は重力波データ解析を研究している大学院生です。
     以下のようなテーマに興味を持っています。特に1番上は研究のテーマであり、特別な興味を持っています。
     ・確率的重力波背景放射の非ガウス的な解析を機械学習を用いて行う
     ・上記に関する、他の確率論的重力波背景放射のこと、機械学習のこと
     ・ブラックホールの質量分布、階層進化の話
     ・ハッブルテンションを重力波から解く
     
-    以下の論文リストを読み、各論文について6つを出力してください。
+    あなたは重力波やそれに関する物理学の専門家として、以下の論文リストを読み、各論文について5つを出力してください。
     1. 論文名
     2. arxivリンク
     3. 和訳要約(3行程度)
-    4. あなたの興味との関連度（1〜10点、太字で強調してください！）
-    5. 判定(7点以上なら「★ピックアップ」、それ以外は「スルー」)
-    6. 点数の理由
-    
-    出力に関して、冒頭に「わかりました！」等書くことは不要です。レイアウトに沿って、わかりやすく、解析をお願いします。
+    4. あなたの興味との関連度（1〜10点、太字で強調してください！）、判定(7点以上なら「★ピックアップ」、それ以外は「スルー」)
+    5. 点数の理由
+
+    出力に関して、冒頭に「わかりました！」等書くことは不要です。<br>等の文字も不要です。レイアウトに沿って、わかりやすく、解説をお願いします。
     また、論文と論文の間の仕切りや点数は最大限強調して、その他も長文であることを考慮して見やすくレイアウトしてください。
     
     [リスト]
