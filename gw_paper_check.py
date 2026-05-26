@@ -2,7 +2,7 @@ import os
 import requests
 from datetime import datetime, timedelta, timezone
 import arxiv
-import google.genai
+from google import genai
 import re
 import time
 
@@ -77,10 +77,9 @@ def fetch_and_summarize_gw_papers():
         send_discord_notify("本日は新着の重力波論文はありませんでした。")
         return
 
-    # 3. Gemini設定
+    # 3. Gemini設定（★ここを新SDKの書き方に完全修正しました）
     GOOGLE_API_KEY = os.environ.get('GEMINI_API_KEY')
-    genai.configure(api_key=GOOGLE_API_KEY)
-    model = genai.GenerativeModel('gemini-3.5-flash')
+    ai_client = genai.Client(api_key=GOOGLE_API_KEY)
 
     print(f"全 {len(filtered_papers)} 件を一括でAIに解析させます...")
     final_output = f"**【本日の新着論文: {len(filtered_papers)}件】**\n\n"
@@ -105,7 +104,7 @@ def fetch_and_summarize_gw_papers():
     1. 論文名
     2. arxivリンク
     3. 和訳要約(3行程度)
-    4. あなたの興味との関連度（1〜10点、太字で最大限強調してください！）
+    4. あなたの興味との関連度（1〜10点、太字で強調してください！）
     5. 判定(7点以上なら「★ピックアップ」、それ以外は「スルー」)
     6. 点数の理由
     
@@ -118,8 +117,11 @@ def fetch_and_summarize_gw_papers():
 
     print("--- AIによる一括解析を実行中... ---")
     try:
-        # 一発勝負で全件を投げる
-        response = model.generate_content(prompt)
+        # 一発勝負で全件を投げる（★新SDKの実行方法）
+        response = ai_client.models.generate_content(
+            model='gemini-3.5-flash',
+            contents=prompt,
+        )
         final_output += response.text + "\n"
     except Exception as e:
         final_output += f"\n【エラー】AIの解析に失敗しました: {e}\n"
