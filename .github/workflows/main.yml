@@ -20,7 +20,7 @@ jobs:
 
       - name: ライブラリのインストール
         run: |
-          pip install arxiv google-generativeai requests
+          pip install arxiv google-genai requests
 
       - name: スクリプトの実行
         env:
