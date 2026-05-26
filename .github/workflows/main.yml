@@ -2,8 +2,8 @@ name: Daily GW Paper Check
 
 on:
   schedule:
-    # 毎日日本時間の朝8時に実行
-    - cron: '53 5 * * *'
+    # 毎日日本時間の朝7時45分に実行（UTCの22時45分）
+    - cron: '30 7 * * *'
   workflow_dispatch:
 
 jobs:
