@@ -2,7 +2,7 @@ import os
 import requests
 from datetime import datetime, timedelta, timezone
 import arxiv
-import google.generativeai as genai
+import google.genai
 import re
 import time
 
