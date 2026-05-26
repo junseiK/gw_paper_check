@@ -15,7 +15,11 @@ def send_discord_notify(message):
     # Discordの文字数制限(2000文字)対策は残しておきます
     chunks = [message[i:i+1900] for i in range(0, len(message), 1900)]
     for chunk in chunks:
-        data = {"content": chunk}
+        data = {
+            "content": chunk,
+            "flags": 4
+            # flags: URLの埋め込み表示を無効化
+        }
         try:
             requests.post(webhook_url, json=data, timeout=10)
         except Exception as e:
@@ -97,14 +101,16 @@ def fetch_and_summarize_gw_papers():
     ・ブラックホールの質量分布、階層進化の話
     ・ハッブルテンションを重力波から解く
     
-    以下の論文リストを読み、各論文について5点を出力してください。
+    以下の論文リストを読み、各論文について6つを出力してください。
     1. 論文名
     2. arxivリンク
     3. 和訳要約(3行程度)
-    4. あなたの興味との関連度（1〜10点）と理由
+    4. あなたの興味との関連度（1〜10点、太字で最大限強調してください！）
     5. 判定(7点以上なら「★ピックアップ」、それ以外は「スルー」)
+    6. 点数の理由
     
     出力に関して、冒頭に「わかりました！」等書くことは不要です。レイアウトに沿って、わかりやすく、解析をお願いします。
+    また、論文と論文の間の仕切りや点数は最大限強調して、その他も長文であることを考慮して見やすくレイアウトしてください。
     
     [リスト]
     {all_papers_text}
