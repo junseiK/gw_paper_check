@@ -41,7 +41,11 @@ def fetch_and_summarize_gw_papers():
     base_date = yesterday.replace(hour=0, minute=0, second=0, microsecond=0).astimezone(timezone.utc)
     
     # 2. arXivから取得
-    client = arxiv.Client(page_size=30, delay_seconds=5, num_retries=3)
+    client = arxiv.Client(
+        page_size=10,
+        delay_seconds=10,
+        num_retries=5
+        )
     
     search_query = 'all:"gravitational wave"'
     
