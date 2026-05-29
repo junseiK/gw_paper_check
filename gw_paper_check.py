@@ -1,4 +1,5 @@
 import os
+import random
 import requests
 from datetime import datetime, timedelta, timezone
 import arxiv
@@ -42,9 +43,9 @@ def fetch_and_summarize_gw_papers():
     
     # 2. arXivから取得
     client = arxiv.Client(
-        page_size=10,
-        delay_seconds=10,
-        num_retries=5
+        page_size=30,
+        delay_seconds=10+random.randint(0, 5),  # ランダムな遅延を追加してサーバーへの負荷を分散
+        num_retries=3
         )
     
     search_query = 'all:"gravitational wave"'
