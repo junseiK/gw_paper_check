@@ -44,7 +44,7 @@ def fetch_and_summarize_gw_papers():
     # 2. arXivから取得
     client = arxiv.Client(
         page_size=30,
-        delay_seconds=10+random.randint(0, 5),  # ランダムな遅延を追加してサーバーへの負荷を分散
+        delay_seconds=10+random.random() * 5,  # ランダムな遅延を追加してサーバーへの負荷を分散
         num_retries=3
         )
     
