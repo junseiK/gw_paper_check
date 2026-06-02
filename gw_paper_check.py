@@ -140,16 +140,40 @@ def fetch_and_summarize_gw_papers():
     """
 
     print("--- AIによる一括解析を実行中... ---")
-    try:
-        # 一発勝負で全件を投げる（★新SDKの実行方法）
-        response = ai_client.models.generate_content(
-            model='gemini-3.5-flash',
-            contents=prompt,
-        )
-        final_output += response.text + "\n"
-    except Exception as e:
-        final_output += f"\n【エラー】AIの解析に失敗しました: {e}\n"
+    gemini_wait_times = [
+        30+random.random() * 5,
+        60+random.random() * 5,
+        120+random.random() * 5
+    ]
+    
+    for attempt, wait in enumerate(gemini_wait_times + [0]):
+        try:
+            # 一発勝負で全件を投げる
+            response = ai_client.models.generate_content(
+                model='gemini-3.5-flash',
+                contents=prompt,
+            )
+            final_output += response.text + "\n"
+            print("AIによる解析が無事に完了しました！")
+            break  # 成功したらループを抜ける！
 
+        except Exception as e:
+            error_msg = str(e)
+            # 503(混雑) または 429(制限) の場合は待機してリトライ
+            if "503" in error_msg or "429" in error_msg:
+                if wait > 0:
+                    print(f"【AI混雑】Geminiサーバーが混雑中。{wait}秒待機して再試行します... (試行 {attempt + 1}/{len(gemini_wait_times)})")
+                    time.sleep(wait)
+                else:
+                    print(f"【完全敗北】Geminiの再試行上限に達しました。")
+                    final_output += f"\n【エラー】AIのサーバー混雑が解消されませんでした: {error_msg}\n"
+                    break
+            else:
+                # それ以外の致命的なエラー（APIキー間違いなど）は即終了
+                print(f"【エラー】想定外のAI解析エラー: {error_msg}")
+                final_output += f"\n【エラー】想定外のAI解析エラー: {error_msg}\n"
+                break
+                
     print("解析完了。Discordに通知を送信します。")
     send_discord_notify(final_output)
 
