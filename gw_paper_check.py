@@ -145,16 +145,22 @@ def fetch_and_summarize_gw_papers():
         60+random.random() * 5,
         120+random.random() * 5
     ]
+
+    main_model = 'gemini-3.5-flash'
+    backup_model = 'gemini-3.1-flash-lite'
+    success = False
     
     for attempt, wait in enumerate(gemini_wait_times + [0]):
         try:
             # 一発勝負で全件を投げる
+            print(f"[{main_model}] で解析を試みます... (試行 {attempt + 1})")
             response = ai_client.models.generate_content(
-                model='gemini-3.5-flash',
+                model=main_model,
                 contents=prompt,
             )
             final_output += response.text + "\n"
             print("AIによる解析が無事に完了しました！")
+            success = True
             break  # 成功したらループを抜ける！
 
         except Exception as e:
@@ -165,14 +171,26 @@ def fetch_and_summarize_gw_papers():
                     print(f"【AI混雑】Geminiサーバーが混雑中。{wait}秒待機して再試行します... (試行 {attempt + 1}/{len(gemini_wait_times)})")
                     time.sleep(wait)
                 else:
-                    print(f"【完全敗北】Geminiの再試行上限に達しました。")
-                    final_output += f"\n【エラー】AIのサーバー混雑が解消されませんでした: {error_msg}\n"
-                    break
+                    print(f"【メイン全滅】{main_model} のリトライ上限に達しました。バックアップに移行します。")
             else:
-                # それ以外の致命的なエラー（APIキー間違いなど）は即終了
-                print(f"【エラー】想定外のAI解析エラー: {error_msg}")
-                final_output += f"\n【エラー】想定外のAI解析エラー: {error_msg}\n"
+                print(f"【致命的エラー】想定外のエラーのためメインを断念します: {error_msg}")
                 break
+                
+    if not success:
+        print(f"🚨 緊急事態：保険モデル [{backup_model}] に切り替えて最終試行を行います...")
+        try:
+            # バックアップモデルはサーバーが別なので、すんなり通る可能性が高いです
+            response = ai_client.models.generate_content(
+                model=backup_model,
+                contents=prompt,
+            )
+            final_output += f"⚠️【お知らせ】メインAI混雑のため、バックアップAI({backup_model})で要約を作成しました。\n\n"
+            final_output += response.text + "\n"
+            print(f"【九死に一生】バックアップモデル {backup_model} で無事に解析に成功しました！")
+            success = True
+        except Exception as e:
+            print(f"【完全敗北】バックアップモデルも全滅しました: {e}")
+            final_output += f"\n【エラー】バックアップのAIモデルも混雑のため全滅しました。詳細: {e}\n"
                 
     print("解析完了。Discordに通知を送信します。")
     send_discord_notify(final_output)
