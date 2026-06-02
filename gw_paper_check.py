@@ -58,22 +58,39 @@ def fetch_and_summarize_gw_papers():
     )
 
     print(f"arXivから論文を取得中（クエリ: {search_query}）...")
+
+    wait_times = [
+        60+random.random() * 5,
+        180+random.random() * 5,
+        300+random.random() * 5
+    ]
     
     results = []
-    max_attempts = 2
-    for attempt in range(1, max_attempts + 1):
+    errmsg=""
+    for attempt, wait in enumerate(wait_times + [0]):
         try:
+            # ここで通信を発生させる
             results = list(client.results(search))
-            break
+            print("無事にarXivから論文を取得成功しました！")
+            break  # 成功したらループを抜ける！
+
         except Exception as e:
-            if "429" in str(e) and attempt < max_attempts:
-                print(f"【警告】429エラー。60秒待機して再試行します...")
-                time.sleep(60)
+            error_msg = str(e)
+            if "429" in error_msg or "503" in error_msg:
+                if wait > 0:
+                    print(f"【警告】サーバー混雑を検知。{wait}秒待機して再試行します... (試行 {attempt + 1}/{len(wait_times)})")
+                    time.sleep(wait)
+                else:
+                    errmsg = f"【完全敗北】再試行の上限に達しました。詳細: {error_msg}" 
+                    print(errmsg)
+                    break
             else:
-                error_msg = f"【お知らせ】arXivへのアクセスに失敗しました（サーバー混雑等）。\n詳細: `{e}`"
-                print(error_msg)
-                send_discord_notify(error_msg)
-                return
+                errmsg = f"想定外のエラーが発生しました: {error_msg}"
+                print(errmsg)
+                break
+    if not errmsg=="":
+        send_discord_notify(errmsg)
+        return
 
     unique_papers = {p.entry_id: p for p in results if p.published >= base_date}
     filtered_papers = sorted(unique_papers.values(), key=lambda x: x.published, reverse=True)
@@ -88,7 +105,7 @@ def fetch_and_summarize_gw_papers():
     ai_client = genai.Client(api_key=GOOGLE_API_KEY)
 
     print(f"全 {len(filtered_papers)} 件を一括でAIに解析させます...")
-    final_output = f"**【本日の新着論文: {len(filtered_papers)}件】**\n\n"
+    
     date_str = now.strftime("%Y年%m月%d日")
     final_output = f"**【本日({date_str})の新着論文: {len(filtered_papers)}件】**\n\n"
     
