@@ -2,7 +2,7 @@ name: Daily GW Paper Check
 
 on:
   schedule:
-    - cron: "13 3 * * *"
+    - cron: "13 2 * * *"
   workflow_dispatch:
 
 jobs:
