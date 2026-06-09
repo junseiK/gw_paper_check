@@ -13,7 +13,7 @@ def send_discord_notify(message):
         print("【エラー】DISCORD_WEBHOOK_URL が設定されていません。")
         return
 
-    # Discordの文字数制限(2000文字)対策は残しておきます
+    # Discordの文字数制限(2000文字)対策
     chunks = [message[i:i+1900] for i in range(0, len(message), 1900)]
     for chunk in chunks:
         data = {
@@ -31,9 +31,9 @@ def clean_text(text):
     if not text: return ""
     return re.sub(r'[^\x09\x0A\x0D\x20-\x7E\x85\xA0-\uD7FF\uE000-\uFDCF\uFDE0-\uFFFD]', '', text)
 
-def fetch_and_summarize_gw_papers():
+def fetch_and_summarize_papers():
     print("=" * 50)
-    print("重力波論文デイリーチェック（一括解析・研究特化版）を開始します...")
+    print("論文デイリーチェックを開始します...")
     print("=" * 50)
 
     jst = timezone(timedelta(hours=9))
@@ -41,14 +41,15 @@ def fetch_and_summarize_gw_papers():
     yesterday = now - timedelta(days=1)
     base_date = yesterday.replace(hour=0, minute=0, second=0, microsecond=0).astimezone(timezone.utc)
     
-    # 2. arXivから取得
     client = arxiv.Client(
         page_size=30,
-        delay_seconds=10+random.random() * 5,  # ランダムな遅延を追加してサーバーへの負荷を分散
+        delay_seconds=10+random.random() * 5,
         num_retries=3
         )
     
-    search_query = 'all:"gravitational wave"'
+    search_query = 'all:"gravitational wave"' # 興味のある分野
+    # search_query = 'cat:astro-ph.HE OR cat:gr-qc OR cat:hep-th OR cat:hep-ph OR cat:physics.gen-ph' 
+    # ↑興味のあるカテゴリ例。複文も可能だが、 (A & B) OR (C & D) などの複雑なクエリは arXiv API では著しく遅くなる場合があるので注意。
     
     search = arxiv.Search(
         query=search_query, 
@@ -69,10 +70,9 @@ def fetch_and_summarize_gw_papers():
     errmsg=""
     for attempt, wait in enumerate(wait_times + [0]):
         try:
-            # ここで通信を発生させる
             results = list(client.results(search))
             print("無事にarXivから論文を取得成功しました！")
-            break  # 成功したらループを抜ける！
+            break
 
         except Exception as e:
             error_msg = str(e)
@@ -81,7 +81,7 @@ def fetch_and_summarize_gw_papers():
                     print(f"【警告】サーバー混雑を検知。{wait}秒待機して再試行します... (試行 {attempt + 1}/{len(wait_times)})")
                     time.sleep(wait)
                 else:
-                    errmsg = f"【完全敗北】再試行の上限に達しました。詳細: {error_msg}" 
+                    errmsg = f"【失敗】再試行の上限に達しました。詳細: {error_msg}" 
                     print(errmsg)
                     break
             else:
@@ -97,10 +97,9 @@ def fetch_and_summarize_gw_papers():
 
     if not filtered_papers:
         date_str = now.strftime("%Y年%m月%d日")
-        send_discord_notify(f"【{date_str}】本日は新着の重力波論文はありませんでした。")
+        send_discord_notify(f"【{date_str}】本日は新着の論文はありませんでした。")
         return
 
-    # 3. Gemini設定（★ここを新SDKの書き方に完全修正しました）
     GOOGLE_API_KEY = os.environ.get('GEMINI_API_KEY')
     ai_client = genai.Client(api_key=GOOGLE_API_KEY)
 
@@ -109,12 +108,10 @@ def fetch_and_summarize_gw_papers():
     date_str = now.strftime("%Y年%m月%d日")
     final_output = f"**【本日({date_str})の新着論文: {len(filtered_papers)}件】**\n\n"
     
-    # 5件ずつのループを廃止し、すべての論文を1つのテキストにまとめる
     all_papers_text = ""
     for idx, paper in enumerate(filtered_papers, 1):
         safe_title = clean_text(paper.title)
         safe_summary = clean_text(paper.summary)
-        # ★ここに paper.entry_id (URL) を追加し、AIがリンクを出力できるようにしました
         all_papers_text += f"\n--- 論文番号: {idx} ---\n【タイトル】{safe_title}\n【URL】{paper.entry_id}\n[アブスト]\n{safe_summary}\n"
 
     prompt = f"""
@@ -152,7 +149,6 @@ def fetch_and_summarize_gw_papers():
     
     for attempt, wait in enumerate(gemini_wait_times + [0]):
         try:
-            # 一発勝負で全件を投げる
             print(f"[{main_model}] で解析を試みます... (試行 {attempt + 1})")
             response = ai_client.models.generate_content(
                 model=main_model,
@@ -161,39 +157,38 @@ def fetch_and_summarize_gw_papers():
             final_output += response.text + "\n"
             print("AIによる解析が無事に完了しました！")
             success = True
-            break  # 成功したらループを抜ける！
+            break
 
         except Exception as e:
             error_msg = str(e)
             # 503(混雑) または 429(制限) の場合は待機してリトライ
             if "503" in error_msg or "429" in error_msg:
                 if wait > 0:
-                    print(f"【AI混雑】Geminiサーバーが混雑中。{wait}秒待機して再試行します... (試行 {attempt + 1}/{len(gemini_wait_times)})")
+                    print(f"【混雑】Geminiサーバーが混雑中。{wait}秒待機して再試行します... (試行 {attempt + 1}/{len(gemini_wait_times)})")
                     time.sleep(wait)
                 else:
-                    print(f"【メイン全滅】{main_model} のリトライ上限に達しました。バックアップに移行します。")
+                    print(f"【失敗】{main_model} のリトライ上限に達しました。予備モデルに移行します。")
             else:
-                print(f"【致命的エラー】想定外のエラーのためメインを断念します: {error_msg}")
+                print(f"【エラー】想定外のエラーのためメインを断念します: {error_msg}")
                 break
                 
     if not success:
-        print(f"🚨 緊急事態：保険モデル [{backup_model}] に切り替えて最終試行を行います...")
+        print(f"🚨 緊急事態：予備モデル [{backup_model}] に切り替えて最終試行を行います...")
         try:
-            # バックアップモデルはサーバーが別なので、すんなり通る可能性が高いです
             response = ai_client.models.generate_content(
                 model=backup_model,
                 contents=prompt,
             )
-            final_output += f"⚠️【お知らせ】メインAI混雑のため、バックアップAI({backup_model})で要約を作成しました。\n\n"
+            final_output += f"⚠️【お知らせ】メインAIモデル混雑のため、予備モデル({backup_model})で要約を作成しました。\n\n"
             final_output += response.text + "\n"
-            print(f"【九死に一生】バックアップモデル {backup_model} で無事に解析に成功しました！")
+            print(f"【予備で成功】予備モデル {backup_model} で無事に解析に成功しました！")
             success = True
         except Exception as e:
-            print(f"【完全敗北】バックアップモデルも全滅しました: {e}")
-            final_output += f"\n【エラー】バックアップのAIモデルも混雑のため全滅しました。詳細: {e}\n"
+            print(f"【失敗】予備モデルも全滅しました: {e}")
+            final_output += f"\n【エラー】予備のAIモデルも混雑のため失敗しました。詳細: {e}\n"
                 
     print("解析完了。Discordに通知を送信します。")
     send_discord_notify(final_output)
 
 if __name__ == "__main__":
-    fetch_and_summarize_gw_papers()
+    fetch_and_summarize_papers()
