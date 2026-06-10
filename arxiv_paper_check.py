@@ -118,7 +118,7 @@ def fetch_and_summarize_papers():
     私は重力波データ解析を研究している大学院生です。
     以下のようなテーマに興味を持っています。特に1番上は研究のテーマであり、特別な興味を持っています。
     ・確率的重力波背景放射の非ガウス的な解析を機械学習を用いて行う
-    ・上記に関する、他の確率論的重力波背景放射のこと、機械学習のこと
+    ・上記に関する、他の確率論的重力波背景放射のデータ解析のこと、重力波のデータ解析に機械学習を用いること
     ・ブラックホールの質量分布、階層進化の話
     ・ハッブルテンションを重力波から解く
     
@@ -173,13 +173,13 @@ def fetch_and_summarize_papers():
                 break
                 
     if not success:
-        print(f"🚨 緊急事態：予備モデル [{backup_model}] に切り替えて最終試行を行います...")
+        print(f"🚨 メインモデル失敗：予備モデル [{backup_model}] に切り替えて最終試行を行います...")
         try:
             response = ai_client.models.generate_content(
                 model=backup_model,
                 contents=prompt,
             )
-            final_output += f"⚠️【お知らせ】メインAIモデル混雑のため、予備モデル({backup_model})で要約を作成しました。\n\n"
+            final_output += f"⚠️【お知らせ】メインのAIモデルが混雑しているため、予備モデル({backup_model})で要約を作成しました。\n\n"
             final_output += response.text + "\n"
             print(f"【予備で成功】予備モデル {backup_model} で無事に解析に成功しました！")
             success = True
