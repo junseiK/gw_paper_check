@@ -117,6 +117,8 @@ def fetch_and_summarize_papers():
     prompt = f"""
     私は重力波データ解析を研究している大学院生です。
     以下のようなテーマに興味を持っています。特に1番上は研究のテーマであり、特別な興味を持っています。
+    ・重力波到来方向検出の高速化&厳密化
+    ・上記に関する、パラメタ推定全般に関する高速化や仮定の吟味など
     ・確率的重力波背景放射の非ガウス的な解析を機械学習を用いて行う
     ・上記に関する、他の確率論的重力波背景放射のデータ解析のこと、重力波のデータ解析に機械学習を用いること
     ・ブラックホールの質量分布、階層進化の話
@@ -140,8 +142,8 @@ def fetch_and_summarize_papers():
     print("--- AIによる一括解析を実行中... ---")
     gemini_wait_times = [
         30+random.random() * 5,
-        60+random.random() * 5,
-        120+random.random() * 5
+        60+random.random() * 10,
+        90+random.random() * 15
     ]
 
     main_model = 'gemini-3.5-flash'
