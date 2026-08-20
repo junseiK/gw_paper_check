@@ -258,7 +258,7 @@ def fetch_and_summarize_papers():
                 
                 # 3. 成功したらDiscordへ個別に追撃通知
                 deep_msg = f"**【深掘りレポート: {paper.title}】**\nURL: {paper.entry_id}\n\n{deep_response.text}"
-				final_output += deep_msg
+                final_output += deep_msg
                 send_discord_notify(final_output)
                 print(f"{paper_id} の深掘り完了・通知しました。")
                 
@@ -266,7 +266,7 @@ def fetch_and_summarize_papers():
                 # 万が一エラーが起きてもスクリプト全体は止めず、Discordにエラーだけ通知して次の論文へ
                 err_msg = f"⚠️ 【深掘りエラー】{paper_id} の解析中にエラーが発生しました（スキップします）: {e}"
                 print(err_msg)
-				final_output += err_msg
+                final_output += err_msg
                 send_discord_notify(final_output)
                 
             finally:
