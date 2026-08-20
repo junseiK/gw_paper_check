@@ -258,9 +258,9 @@ def fetch_and_summarize_papers():
                 見やすくMarkdownの箇条書きや表を使って出力してください。
                 """
                 
-                print(f"gemini-2.5-pro で全文解析を実行中...")
+                print(f"gemini-3.1-pro-preview で全文解析を実行中...")
                 deep_response = ai_client.models.generate_content(
-                    model='gemini-2.5-pro',
+                    model='gemini-3.1-pro-preview',
                     contents=[uploaded_file, deep_prompt]
                 )
                 
