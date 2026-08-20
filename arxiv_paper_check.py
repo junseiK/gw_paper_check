@@ -224,8 +224,17 @@ def fetch_and_summarize_papers():
                     continue
                     
                 print(f"\n【深掘り開始】{paper_id} のPDFをダウンロードします...")
-                pdf_path = f"https://arxiv.org/pdf/{paper_id}"
-                paper.download_pdf(filename=pdf_path)
+                pdf_path = f"{paper_id}.pdf"
+                
+                pdf_url = f"https://arxiv.org/pdf/{paper_id}"
+                try:
+                    pdf_response = requests.get(pdf_url, timeout=30)
+                    pdf_response.raise_for_status()
+                    with open(pdf_path, 'wb') as f:
+                        f.write(pdf_response.content)
+                except Exception as dl_error:
+                    print(f"PDFのダウンロードに失敗したためスキップします: {dl_error}")
+                    continue
                 
                 print("GeminiにPDFをアップロード中...")
                 uploaded_file = ai_client.files.upload(file=pdf_path)
@@ -265,7 +274,6 @@ def fetch_and_summarize_papers():
                 # 万が一エラーが起きてもスクリプト全体は止めず、Discordにエラーだけ通知して次の論文へ
                 err_msg = f"⚠️ 【深掘りエラー】{paper_id} の解析中にエラーが発生しました（スキップします）: {e}"
                 print(err_msg)
-                final_output += err_msg
                 send_discord_notify(final_output)
                 
             finally:
