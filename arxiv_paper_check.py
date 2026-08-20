@@ -208,6 +208,7 @@ def fetch_and_summarize_papers():
                 
     # IDの重複排除
     pickup_ids = list(set(pickup_ids))
+    print(f"★ピックアップされた論文ID: {pickup_ids}")
     
     if not pickup_ids:
         print("本日は★ピックアップされた論文はありませんでした。深掘りをスキップして終了します。")
