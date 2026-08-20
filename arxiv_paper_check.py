@@ -224,7 +224,7 @@ def fetch_and_summarize_papers():
                     continue
                     
                 print(f"\n【深掘り開始】{paper_id} のPDFをダウンロードします...")
-                pdf_path = f"{paper_id}.pdf"
+                pdf_path = f"https://arxiv.org/pdf/{paper_id}"
                 paper.download_pdf(filename=pdf_path)
                 
                 print("GeminiにPDFをアップロード中...")
