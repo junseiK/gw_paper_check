@@ -267,14 +267,12 @@ def fetch_and_summarize_papers():
                 # 3. 成功したらDiscordへ個別に追撃通知
                 deep_msg = f"**【深掘りレポート: {paper.title}】**\nURL: {paper.entry_id}\n\n{deep_response.text}"
                 final_output += deep_msg
-                send_discord_notify(final_output)
                 print(f"{paper_id} の深掘り完了・通知しました。")
                 
             except Exception as e:
                 # 万が一エラーが起きてもスクリプト全体は止めず、Discordにエラーだけ通知して次の論文へ
                 err_msg = f"⚠️ 【深掘りエラー】{paper_id} の解析中にエラーが発生しました（スキップします）: {e}"
                 print(err_msg)
-                send_discord_notify(final_output)
                 
             finally:
                 # 4. ゴミが残らないよう、成功しても失敗しても必ずファイルを削除
@@ -285,7 +283,7 @@ def fetch_and_summarize_papers():
                         ai_client.files.delete(name=uploaded_file.name)
                 except Exception as cleanup_e:
                     print(f"ファイルクリーンアップ失敗: {cleanup_e}")
-                    
+    send_discord_notify(final_output)
 
 if __name__ == "__main__":
     fetch_and_summarize_papers()
