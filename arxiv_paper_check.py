@@ -147,7 +147,7 @@ def fetch_and_summarize_papers():
         90+random.random() * 15
     ]
 
-    main_model = 'gemini-3.5-flash'
+    main_model = 'gemini-3.6-flash'
     backup_model = 'gemini-3.1-flash-lite'
     success = False
     
@@ -235,19 +235,22 @@ def fetch_and_summarize_papers():
                 deep_prompt = f"""
                 私は重力波データ解析を研究している大学院生です。
                 この論文（{paper.title}）の全文を読み込み、以下の点について私の研究に役立つように詳細に抽出・要約してください。
-                
-                - Bilby等のパラメータ推定において、数値的な手法だけでなく解析解を用いたアプローチや工夫が提案されているか
+
+                - 研究の目的と背景
+                - 提案手法の具体的な数式展開やアルゴリズムの詳細
+                - 実験設定やデータセットの詳細（特に重力波データ解析に関する部分）
+                - 実験結果の具体的な数値やグラフの要約
                 - サンプリング時の計算コスト（具体的な実行時間やリソースの削減具合）への言及はあるか
-                - 確率的重力波背景放射について触れられている場合、非ガウス性をどのように取り扱っているか
+                - ノイズの非ガウス性をどのように取り扱っているか
                 - この論文の新規性と、仮定している前提条件
                 
-                アブストラクトの繰り返しではなく、数式展開や実験セクション（Method/Results）から具体的な手法や数値を抜き出してまとめてください。
+                アブストラクトの繰り返しではなく、数式展開や実験セクション（Method/Results）から具体的な手法や数値を抜き出して解析してください。
                 見やすくMarkdownの箇条書きや表を使って出力してください。
                 """
                 
-                print(f"gemini-3.1-pro で全文解析を実行中...")
+                print(f"gemini-2.5-pro で全文解析を実行中...")
                 deep_response = ai_client.models.generate_content(
-                    model='gemini-3.1-pro',
+                    model='gemini-2.5-pro',
                     contents=[uploaded_file, deep_prompt]
                 )
                 
