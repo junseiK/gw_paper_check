@@ -61,9 +61,9 @@ def fetch_and_summarize_papers():
     print(f"arXivから論文を取得中（クエリ: {search_query}）...")
 
     wait_times = [
+        30+random.random() * 5,
         60+random.random() * 5,
-        180+random.random() * 5,
-        300+random.random() * 5
+        90+random.random() * 5
     ]
     
     results = []
@@ -131,10 +131,10 @@ def fetch_and_summarize_papers():
     4. あなたの興味との関連度（1〜10点、太字で強調）、判定(7点以上なら「★ピックアップ」、それ以外は「スルー」)
     5. 点数の理由
 
-		列挙する際は、点数順に、（低スコアのものも）すべて列挙してください。
-    出力に関して、冒頭に「わかりました！」等書くことは不要です。レイアウトに沿って、わかりやすく、解説をお願いします。
+	列挙する際は、点数順に、（低スコアのものも）すべて列挙してください。
+    出力に関して、冒頭に「わかりました！」等書いたり、div等で装飾することも不要です。レイアウトに沿って、テキストのみを、わかりやすく、解説をお願いします。
     また、論文と論文の間の仕切りや点数は最大限強調して、その他も長文であることを考慮して見やすくレイアウトしてください。
-    また、論文ごとに区切ってコードで解析を行うので、論文の紹介が終わって次の論文に移る際は、必ず「-----」と打ってください。逆に、それ以外の箇所で「-----」は使わないでください。
+    繰り返しますが、点数順に並べ替えて出力してください。
     
     [リスト]
     {all_papers_text}
@@ -143,8 +143,8 @@ def fetch_and_summarize_papers():
     print("--- AIによる一括解析を実行中... ---")
     gemini_wait_times = [
         30+random.random() * 5,
-        60+random.random() * 10,
-        90+random.random() * 15
+        60+random.random() * 5,
+        90+random.random() * 5
     ]
 
     main_model = 'gemini-flash-latest'
