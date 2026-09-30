@@ -147,8 +147,8 @@ def fetch_and_summarize_papers():
         90+random.random() * 15
     ]
 
-    main_model = 'gemini-3.6-flash'
-    backup_model = 'gemini-3.1-flash-lite'
+    main_model = 'gemini-flash-latest'
+    backup_model = 'gemini-flash-lite-latest'
     success = False
     
     for attempt, wait in enumerate(gemini_wait_times + [0]):
@@ -177,13 +177,13 @@ def fetch_and_summarize_papers():
                 break
                 
     if not success:
-        print(f"🚨 メインモデル失敗：予備モデル [{backup_model}] に切り替えて最終試行を行います...")
+        print(f"メインモデル失敗：予備モデル [{backup_model}] に切り替えて最終試行を行います...")
         try:
             response = ai_client.models.generate_content(
                 model=backup_model,
                 contents=prompt,
             )
-            final_output += f"⚠️【お知らせ】メインのAIモデルが混雑しているため、予備モデル({backup_model})で要約を作成しました。\n\n"
+            final_output += f"【お知らせ】メインのAIモデルが混雑しているため、予備モデル({backup_model})で要約を作成しました。\n\n"
             final_output += response.text + "\n"
             print(f"【予備で成功】予備モデル {backup_model} で無事に解析に成功しました！")
             success = True
@@ -192,97 +192,6 @@ def fetch_and_summarize_papers():
             final_output += f"\n【エラー】予備のAIモデルも混雑のため失敗しました。詳細: {e}\n"
                 
 
-    # ＝＝＝ ここから追加：Proモデルによる深掘り解析（フェーズ2） ＝＝＝
-    print("--- Proモデルによる★ピックアップ論文の深掘りを開始します ---")
-    
-    # 1. Flashの出力結果から「★ピックアップ」判定された論文のIDを抽出する
-    # "--- 論文番号:" ごとにテキストを分割し、そのブロックにピックアップが含まれるか判定
-    blocks = final_output.split("-----")
-    pickup_ids = []
-    for block in blocks[1:]: 
-        if "★ピックアップ" in block:
-            # ブロック内からarxivのURL（例: arxiv.org/abs/2401.01234）を抽出
-            match = re.search(r'arxiv\.org/abs/(\d+\.\d+)', block)
-            if match:
-                pickup_ids.append(match.group(1))
-                
-    # IDの重複排除
-    pickup_ids = list(set(pickup_ids))
-    print(f"★ピックアップされた論文ID: {pickup_ids}")
-    
-    if not pickup_ids:
-        print("本日は★ピックアップされた論文はありませんでした。深掘りをスキップして終了します。")
-    else:
-        print(f"深掘り対象論文: {len(pickup_ids)} 件 ({', '.join(pickup_ids)})")
-        
-        # 2. 対象論文を1つずつダウンロードしてProモデルに読ませる
-        for paper_id in pickup_ids:
-            try:
-                # 取得済みの論文データから対象のオブジェクトを探す
-                paper = next((p for p in filtered_papers if paper_id in p.entry_id), None)
-                if not paper:
-                    continue
-                    
-                print(f"\n【深掘り開始】{paper_id} のPDFをダウンロードします...")
-                pdf_path = f"{paper_id}.pdf"
-                
-                pdf_url = f"https://arxiv.org/pdf/{paper_id}"
-                try:
-                    pdf_response = requests.get(pdf_url, timeout=30)
-                    pdf_response.raise_for_status()
-                    with open(pdf_path, 'wb') as f:
-                        f.write(pdf_response.content)
-                except Exception as dl_error:
-                    print(f"PDFのダウンロードに失敗したためスキップします: {dl_error}")
-                    continue
-                
-                print("GeminiにPDFをアップロード中...")
-                uploaded_file = ai_client.files.upload(file=pdf_path)
-                
-                # サーバー側でPDFの処理が完了するのを少し待機
-                time.sleep(5 + random.random())
-                
-                deep_prompt = f"""
-                私は重力波データ解析を研究している大学院生です。
-                この論文（{paper.title}）の全文を読み込み、以下の点について私の研究に役立つように詳細に抽出・要約してください。
-
-                - 研究の目的と背景
-                - 提案手法の具体的な数式展開やアルゴリズムの詳細
-                - 実験設定やデータセットの詳細（特に重力波データ解析に関する部分）
-                - 実験結果の具体的な数値やグラフの要約
-                - サンプリング時の計算コスト（具体的な実行時間やリソースの削減具合）への言及はあるか
-                - ノイズの非ガウス性をどのように取り扱っているか
-                - この論文の新規性と、仮定している前提条件
-                
-                アブストラクトの繰り返しではなく、数式展開や実験セクション（Method/Results）から具体的な手法や数値を抜き出して解析してください。
-                見やすくMarkdownの箇条書きや表を使って出力してください。
-                """
-                
-                print(f"gemini-3.1-pro-preview で全文解析を実行中...")
-                deep_response = ai_client.models.generate_content(
-                    model='gemini-3.1-pro-preview',
-                    contents=[uploaded_file, deep_prompt]
-                )
-                
-                # 3. 成功したらDiscordへ個別に追撃通知
-                deep_msg = f"**【深掘りレポート: {paper.title}】**\nURL: {paper.entry_id}\n\n{deep_response.text}"
-                final_output += deep_msg
-                print(f"{paper_id} の深掘り完了・通知しました。")
-                
-            except Exception as e:
-                # 万が一エラーが起きてもスクリプト全体は止めず、Discordにエラーだけ通知して次の論文へ
-                err_msg = f"⚠️ 【深掘りエラー】{paper_id} の解析中にエラーが発生しました（スキップします）: {e}"
-                print(err_msg)
-                
-            finally:
-                # 4. ゴミが残らないよう、成功しても失敗しても必ずファイルを削除
-                try:
-                    if os.path.exists(pdf_path):
-                        os.remove(pdf_path)
-                    if 'uploaded_file' in locals():
-                        ai_client.files.delete(name=uploaded_file.name)
-                except Exception as cleanup_e:
-                    print(f"ファイルクリーンアップ失敗: {cleanup_e}")
     send_discord_notify(final_output)
 
 if __name__ == "__main__":
