@@ -2,6 +2,8 @@ name: Daily GW Paper Check
 
 on:
   workflow_dispatch:
+  schedule:
+    - cron: '13 20 * * *'
 
 jobs:
   build:
